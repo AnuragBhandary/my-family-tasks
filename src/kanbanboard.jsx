@@ -29,48 +29,49 @@ function humanMonth(key) {
 /* ---------------- Identity token + API helper ---------------- */
 function hasIdentityHash() {
   return /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
-    (window.location && window.location.hash) || ''
+    (window.location && window.location.hash) || ""
   );
 }
+const markProcessing = () => sessionStorage.setItem("ni_processing", "1");
+const isProcessing = () => sessionStorage.getItem("ni_processing") === "1";
+const clearProcessing = () => sessionStorage.removeItem("ni_processing");
 
 async function getTokenOrRedirect() {
   const ni = window.netlifyIdentity;
-  if (!ni) throw new Error('Netlify Identity not loaded');
+  if (!ni) throw new Error("Netlify Identity not loaded");
 
-  // If already logged in
-  if (ni.currentUser()) return ni.currentUser().jwt();
+  // If we arrived with a token, remember it (the widget may clear the hash immediately)
+  if (hasIdentityHash()) markProcessing();
 
-  // Wait briefly for Identity to finish init (or login) before deciding
-  const waitForInitOrLogin = () =>
-    new Promise((resolve) => {
-      let done = false;
-      const finish = () => { if (!done) { done = true; resolve(); } };
-      ni.on('init', finish);
-      ni.on('login', finish);
-      setTimeout(finish, 3000); // fallback in case events already fired
+  // Already logged in?
+  const user = ni.currentUser && ni.currentUser();
+  if (user) return user.jwt();
+
+  // If we're processing an invite/magic-link/reset, open the widget and wait
+  if (hasIdentityHash() || isProcessing()) {
+    try { ni.open("login"); } catch {}
+    await new Promise((resolve) => {
+      const done = () => { clearProcessing(); resolve(); };
+      ni.on("login", done);
+      ni.on("init", (u) => { if (u) done(); });
     });
-  await waitForInitOrLogin();
-
-  if (ni.currentUser()) return ni.currentUser().jwt();
-
-  // If a token is in the URL, open the widget and wait for login
-  if (hasIdentityHash()) {
-    try { ni.open('login'); } catch {}
-    await new Promise((resolve) => ni.on('login', resolve));
     return ni.currentUser().jwt();
   }
 
-  // No user and no token to process → go to /login
-  location.href = '/login';
-  throw new Error('Not logged in');
+  // No user and nothing to process → go to /login
+  location.href = "/login";
+  throw new Error("Not logged in");
 }
 
 async function api(method, body) {
   const token = await getTokenOrRedirect();
-  const res = await fetch('/.netlify/functions/tasks', {
+  const res = await fetch("/.netlify/functions/tasks", {
     method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: method === 'GET' ? undefined : JSON.stringify(body || {}),
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: method === "GET" ? undefined : JSON.stringify(body || {}),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

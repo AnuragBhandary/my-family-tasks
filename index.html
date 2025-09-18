@@ -5,23 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anu’s Task Board</title>
 
-    <!-- Netlify Identity must load + init BEFORE the app so it can read tokens -->
+    <!-- Remember if we arrived with an Identity token -->
+    <script>
+      (function () {
+        const hasTok = /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
+          (location.hash || "")
+        );
+        if (hasTok) sessionStorage.setItem("ni_processing", "1");
+      })();
+    </script>
+
+    <!-- Netlify Identity -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
       if (window.netlifyIdentity) {
         netlifyIdentity.init();
 
-        // If we arrive with an invite/reset/magic-link token, keep the widget open.
-        const hasIdentityToken =
-          /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
-        netlifyIdentity.on('init', (user) => {
-          if (!user && hasIdentityToken) netlifyIdentity.open('login');
+        const isProcessing = () => sessionStorage.getItem("ni_processing") === "1";
+
+        netlifyIdentity.on("init", (user) => {
+          // If a token was present (even if the hash is now cleared), keep the widget open
+          if (!user && isProcessing()) netlifyIdentity.open("login");
+          if (user) sessionStorage.removeItem("ni_processing");
         });
 
-        // Optional: if user logs out, go to /login
-        netlifyIdentity.on('logout', () => { location.href = '/login'; });
+        netlifyIdentity.on("login", () => {
+          sessionStorage.removeItem("ni_processing");
+        });
+
+        netlifyIdentity.on("error", () => {
+          sessionStorage.removeItem("ni_processing");
+        });
+
+        netlifyIdentity.on("logout", () => {
+          location.href = "/login";
+        });
       }
     </script>
+
 
   </head>
   <body>
