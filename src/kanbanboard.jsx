@@ -80,12 +80,29 @@ async function api(method, body) {
 
 /* ---------------- Header ---------------- */
 function Header({ onReset, onOpenArchives, counts, progress }) {
+  const handleLogout = () => {
+    const ni = window.netlifyIdentity;
+    // If the widget didn't load for some reason, just go to /login
+    if (!ni) { window.location.href = '/login'; return; }
+
+    if (ni.currentUser && ni.currentUser()) {
+      // Open the widget (helps the library clear tokens in some flows) then logout
+      try { ni.open(); } catch {}
+      ni.logout();
+      // Fallback redirect in case the logout event handler in index.html misses
+      setTimeout(() => { if (window.location.pathname !== '/login') window.location.href = '/login'; }, 500);
+    } else {
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <>
       <header className="app-header" style={{ justifyContent: 'space-between' }}>
         <h1 className="app-title">Anu&apos;s Task Board</h1>
 
         <div className="header-actions">
+          {/* Archives */}
           <button
             className="icon-btn tooltip archive-btn"
             data-tip="Archives"
@@ -98,12 +115,12 @@ function Header({ onReset, onOpenArchives, counts, progress }) {
             </svg>
           </button>
 
-          {/* Optional: log out */}
+          {/* Logout (Reset removed per your request) */}
           <button
-            className="icon-btn tooltip reset-btn"
+            className="icon-btn tooltip logout-btn"
             data-tip="Log out"
             aria-label="Log out"
-            onClick={() => window.netlifyIdentity && window.netlifyIdentity.logout()}
+            onClick={handleLogout}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                  viewBox="0 0 24 24" fill="currentColor" role="img" aria-hidden="true">
@@ -113,6 +130,7 @@ function Header({ onReset, onOpenArchives, counts, progress }) {
         </div>
       </header>
 
+      {/* Progress row */}
       <div className="progress-row">
         <div className="progress-text">Done {counts.done}/{counts.total}</div>
         <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
