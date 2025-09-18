@@ -33,30 +33,35 @@ function hasIdentityHash() {
   );
 }
 
-// Wait for a user to be available if we're processing an Identity token
 async function getTokenOrRedirect() {
   const ni = window.netlifyIdentity;
   if (!ni) throw new Error('Netlify Identity not loaded');
 
-  // If already logged in, return the token
-  const existing = ni.currentUser && ni.currentUser();
-  if (existing) return existing.jwt();
+  // If already logged in
+  if (ni.currentUser()) return ni.currentUser().jwt();
 
-  // If the URL has an Identity token (invite, magic link, password reset), wait for login
-  if (hasIdentityHash()) {
-    await new Promise((resolve, reject) => {
-      const onLogin = () => { ni.off('login', onLogin); resolve(); };
-      const onError = (e) => { ni.off('error', onError); reject(e); };
-      ni.on('login', onLogin);
-      ni.on('error', onError);
-      // Ensure the widget is open in case it's not already
-      try { ni.open('login'); } catch {}
+  // Wait briefly for Identity to finish init (or login) before deciding
+  const waitForInitOrLogin = () =>
+    new Promise((resolve) => {
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      ni.on('init', finish);
+      ni.on('login', finish);
+      setTimeout(finish, 3000); // fallback in case events already fired
     });
+  await waitForInitOrLogin();
+
+  if (ni.currentUser()) return ni.currentUser().jwt();
+
+  // If a token is in the URL, open the widget and wait for login
+  if (hasIdentityHash()) {
+    try { ni.open('login'); } catch {}
+    await new Promise((resolve) => ni.on('login', resolve));
     return ni.currentUser().jwt();
   }
 
   // No user and no token to process → go to /login
-  window.location.href = '/login';
+  location.href = '/login';
   throw new Error('Not logged in');
 }
 
@@ -64,10 +69,7 @@ async function api(method, body) {
   const token = await getTokenOrRedirect();
   const res = await fetch('/.netlify/functions/tasks', {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: method === 'GET' ? undefined : JSON.stringify(body || {}),
   });
   if (!res.ok) throw new Error(await res.text());

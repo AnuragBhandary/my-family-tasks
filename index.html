@@ -11,12 +11,14 @@
       if (window.netlifyIdentity) {
         netlifyIdentity.init();
 
-        // NEW: if we arrive with an invite/recovery/access token, open the widget and don't navigate away
+        // If we arrive with an invite/reset/magic-link token, keep the widget open.
         const hasIdentityToken =
           /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
         netlifyIdentity.on('init', (user) => {
           if (!user && hasIdentityToken) netlifyIdentity.open('login');
         });
+
+        // Optional: if user logs out, go to /login
         netlifyIdentity.on('logout', () => { location.href = '/login'; });
       }
     </script>
