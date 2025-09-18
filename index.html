@@ -2,12 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Anu's Task Board</title>
-  </head>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <title>Anu’s Task Board</title>
 
+    <!-- Netlify Identity must load + init BEFORE the app so it can read tokens -->
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script>
+      window.netlifyIdentity && window.netlifyIdentity.init();
+      // Optional: if user logs out from the widget, send them to /login
+      window.netlifyIdentity && window.netlifyIdentity.on('logout', () => {
+        location.href = '/login';
+      });
+    </script>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
