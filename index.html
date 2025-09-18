@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anu’s Task Board</title>
 
-    <!-- Remember if we arrived with an Identity token -->
+    <!-- 1) Remember if we arrived with a Netlify Identity token in the URL hash -->
     <script>
       (function () {
         const hasTok = /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
@@ -15,38 +15,40 @@
       })();
     </script>
 
-    <!-- Netlify Identity -->
+    <!-- 2) Netlify Identity widget (must load BEFORE your app) -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
-      if (window.netlifyIdentity) {
-        netlifyIdentity.init();
-
+      (function () {
+        if (!window.netlifyIdentity) return;
+        const ni = window.netlifyIdentity;
         const isProcessing = () => sessionStorage.getItem("ni_processing") === "1";
+        const hasHashToken = () =>
+          /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
 
-        netlifyIdentity.on("init", (user) => {
-          // If a token was present (even if the hash is now cleared), keep the widget open
-          if (!user && isProcessing()) netlifyIdentity.open("login");
+        ni.init();
+
+        // If a token is/was present, keep the widget open so it can finish
+        ni.on("init", (user) => {
+          if (!user && (isProcessing() || hasHashToken())) {
+            try { ni.open("login"); } catch {}
+          }
           if (user) sessionStorage.removeItem("ni_processing");
         });
 
-        netlifyIdentity.on("login", () => {
+        ni.on("login", () => {
           sessionStorage.removeItem("ni_processing");
+          // clear hash after a successful login (cosmetic)
+          if (location.hash) history.replaceState(null, "", location.pathname + location.search);
         });
 
-        netlifyIdentity.on("error", () => {
-          sessionStorage.removeItem("ni_processing");
-        });
-
-        netlifyIdentity.on("logout", () => {
-          location.href = "/login";
-        });
-      }
+        ni.on("error", () => sessionStorage.removeItem("ni_processing"));
+        ni.on("logout", () => { location.href = "/login"; });
+      })();
     </script>
-
-
   </head>
   <body>
     <div id="root"></div>
+    <!-- Your Vite/React app -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
