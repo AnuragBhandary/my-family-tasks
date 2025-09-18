@@ -5,39 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Anu’s Task Board</title>
 
-    <!-- 1) Remember if we arrived with a Netlify Identity token in the URL hash -->
+    <!-- Remember if we arrived with a Netlify Identity token -->
     <script>
       (function () {
-        const hasTok = /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
-          (location.hash || "")
-        );
+        const hasTok = /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
         if (hasTok) sessionStorage.setItem("ni_processing", "1");
       })();
     </script>
 
-    <!-- 2) Netlify Identity widget (must load BEFORE your app) -->
+    <!-- Netlify Identity (must load BEFORE your app) -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
       (function () {
         if (!window.netlifyIdentity) return;
         const ni = window.netlifyIdentity;
+
         const isProcessing = () => sessionStorage.getItem("ni_processing") === "1";
         const hasHashToken = () =>
           /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
 
         ni.init();
 
-        // If a token is/was present, keep the widget open so it can finish
+        // If a token is/was present, OPEN THE WIDGET (no view argument!) so it shows
+        // the correct "Set password" / "Confirm" / "Recover" screen.
         ni.on("init", (user) => {
           if (!user && (isProcessing() || hasHashToken())) {
-            try { ni.open("login"); } catch {}
+            try { ni.open(); } catch {}
           }
           if (user) sessionStorage.removeItem("ni_processing");
         });
 
         ni.on("login", () => {
           sessionStorage.removeItem("ni_processing");
-          // clear hash after a successful login (cosmetic)
           if (location.hash) history.replaceState(null, "", location.pathname + location.search);
         });
 
@@ -48,7 +47,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Your Vite/React app -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

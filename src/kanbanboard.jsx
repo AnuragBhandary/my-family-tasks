@@ -49,7 +49,7 @@ async function getTokenOrRedirect() {
 
   // If we're processing an invite/magic-link/reset, open the widget and wait
   if (hasIdentityHash() || isProcessing()) {
-    try { ni.open("login"); } catch {}
+    try { ni.open(); } catch {}
     await new Promise((resolve) => {
       const done = () => { clearProcessing(); resolve(); };
       ni.on("login", done);

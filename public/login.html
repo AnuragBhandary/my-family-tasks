@@ -20,13 +20,18 @@
     <div class="card">
       <h1>Sign in</h1>
       <p>We’ll email you a one-time login link.</p>
-      <button class="btn" onclick="window.netlifyIdentity && netlifyIdentity.open('login')">Sign in</button>
+      <button class="btn" onclick="window.netlifyIdentity && netlifyIdentity.open()">Sign in</button>
     </div>
 
     <script>
       if (window.netlifyIdentity) {
         // Initialize so invite/reset/magic-link tokens in the URL are processed
         netlifyIdentity.init();
+
+        // If we arrive with a token, let the widget pick the correct view (no "login" arg)
+        const hasTok=/invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash||"");
+        if (hasTok) netlifyIdentity.open();
+
         netlifyIdentity.on('init', user => { if (user) location.replace('/'); });
         netlifyIdentity.on('login', () => location.replace('/'));
       }
