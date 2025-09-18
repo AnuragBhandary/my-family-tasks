@@ -27,26 +27,53 @@ function humanMonth(key) {
 }
 
 /* ---------------- Identity token + API helper ---------------- */
+function hasIdentityHash() {
+  return /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
+    (window.location && window.location.hash) || ''
+  );
+}
+
+// Wait for a user to be available if we're processing an Identity token
 async function getTokenOrRedirect() {
   const ni = window.netlifyIdentity;
   if (!ni) throw new Error('Netlify Identity not loaded');
-  const user = ni.currentUser();
-  if (!user) {
-    window.location.href = '/login';
-    throw new Error('Not logged in');
+
+  // If already logged in, return the token
+  const existing = ni.currentUser && ni.currentUser();
+  if (existing) return existing.jwt();
+
+  // If the URL has an Identity token (invite, magic link, password reset), wait for login
+  if (hasIdentityHash()) {
+    await new Promise((resolve, reject) => {
+      const onLogin = () => { ni.off('login', onLogin); resolve(); };
+      const onError = (e) => { ni.off('error', onError); reject(e); };
+      ni.on('login', onLogin);
+      ni.on('error', onError);
+      // Ensure the widget is open in case it's not already
+      try { ni.open('login'); } catch {}
+    });
+    return ni.currentUser().jwt();
   }
-  return user.jwt();
+
+  // No user and no token to process → go to /login
+  window.location.href = '/login';
+  throw new Error('Not logged in');
 }
+
 async function api(method, body) {
   const token = await getTokenOrRedirect();
   const res = await fetch('/.netlify/functions/tasks', {
     method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
     body: method === 'GET' ? undefined : JSON.stringify(body || {}),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
 
 /* ---------------- Header ---------------- */
 function Header({ onReset, onOpenArchives, counts, progress }) {

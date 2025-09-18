@@ -8,12 +8,19 @@
     <!-- Netlify Identity must load + init BEFORE the app so it can read tokens -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
-      window.netlifyIdentity && window.netlifyIdentity.init();
-      // Optional: if user logs out from the widget, send them to /login
-      window.netlifyIdentity && window.netlifyIdentity.on('logout', () => {
-        location.href = '/login';
-      });
+      if (window.netlifyIdentity) {
+        netlifyIdentity.init();
+
+        // NEW: if we arrive with an invite/recovery/access token, open the widget and don't navigate away
+        const hasIdentityToken =
+          /invite_token|confirmation_token|recovery_token|access_token|token=/.test(location.hash || "");
+        netlifyIdentity.on('init', (user) => {
+          if (!user && hasIdentityToken) netlifyIdentity.open('login');
+        });
+        netlifyIdentity.on('logout', () => { location.href = '/login'; });
+      }
     </script>
+
   </head>
   <body>
     <div id="root"></div>
