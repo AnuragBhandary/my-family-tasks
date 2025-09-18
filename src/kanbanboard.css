@@ -259,3 +259,20 @@ body {
 .card-meta .delete-btn:active {
   transform: translateY(-50%); /* prevent hover scale from .icon-btn:hover */
 }
+
+/* Keep delete icon from shifting on hover or during drag (card + overlay) */
+.card-meta .delete-btn,
+.overlayCard .card-meta .icon-btn {
+  position: absolute;
+  top: 50%;
+  right: var(--pad);
+  transform: translateY(-50%);
+  padding: 0;
+}
+
+.card-meta .delete-btn:hover,
+.card-meta .delete-btn:active,
+.overlayCard .card-meta .icon-btn:hover,
+.overlayCard .card-meta .icon-btn:active {
+  transform: translateY(-50%) !important; /* override .icon-btn:hover { transform: scale(...) } */
+}

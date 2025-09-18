@@ -522,7 +522,7 @@ function KanbanBoard() {
             <div className="taskCard overlayCard" data-status={activeTask?.status}>
               <div className="card-meta">
                 <span className="date-badge">{formatDate(activeTask?.created_at || activeTask?.createdAt)}</span>
-                <span className="icon-btn" aria-hidden="true">
+                <span className="icon-btn delete-btn" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
                        viewBox="0 0 24 24" fill="currentColor"><path d="M9 3v1H4v2h16V4h-5V3H9zm2 6v9h2V9h-2zm-4 0v9h2V9H7zm8 0v9h2V9h-2z"/></svg>
                 </span>
