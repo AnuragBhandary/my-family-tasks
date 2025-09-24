@@ -9,7 +9,6 @@
 [edge_functions]
   directory = "netlify/edge-functions"
 
-# Only one edge function mapping block
 [[edge_functions]]
   path = "/*"
   function = "basic-auth"
