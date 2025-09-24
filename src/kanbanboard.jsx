@@ -26,83 +26,25 @@ function humanMonth(key) {
   return date.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 }
 
-/* ---------------- Identity token + API helper ---------------- */
-function hasIdentityHash() {
-  return /invite_token|confirmation_token|recovery_token|access_token|token=/.test(
-    (window.location && window.location.hash) || ""
-  );
-}
-const markProcessing = () => sessionStorage.setItem("ni_processing", "1");
-const isProcessing = () => sessionStorage.getItem("ni_processing") === "1";
-const clearProcessing = () => sessionStorage.removeItem("ni_processing");
-
-async function getTokenOrRedirect() {
-  const ni = window.netlifyIdentity;
-  if (!ni) throw new Error("Netlify Identity not loaded");
-
-  // If we arrived with a token, remember it (the widget may clear the hash immediately)
-  if (hasIdentityHash()) markProcessing();
-
-  // Already logged in?
-  const user = ni.currentUser && ni.currentUser();
-  if (user) return user.jwt();
-
-  // If we're processing an invite/magic-link/reset, open the widget and wait
-  if (hasIdentityHash() || isProcessing()) {
-    try { ni.open(); } catch {}
-    await new Promise((resolve) => {
-      const done = () => { clearProcessing(); resolve(); };
-      ni.on("login", done);
-      ni.on("init", (u) => { if (u) done(); });
-    });
-    return ni.currentUser().jwt();
-  }
-
-  // No user and nothing to process → go to /login
-  location.href = "/login";
-  throw new Error("Not logged in");
-}
-
+/* ---------------- API helper (no auth) ---------------- */
 async function api(method, body) {
-  const token = await getTokenOrRedirect();
-  const res = await fetch("/.netlify/functions/tasks", {
+  const res = await fetch('/.netlify/functions/tasks', {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: method === "GET" ? undefined : JSON.stringify(body || {}),
+    headers: { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body || {}),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-
 /* ---------------- Header ---------------- */
-function Header({ onReset, onOpenArchives, counts, progress }) {
-  const handleLogout = () => {
-    const ni = window.netlifyIdentity;
-    // If the widget didn't load for some reason, just go to /login
-    if (!ni) { window.location.href = '/login'; return; }
-
-    if (ni.currentUser && ni.currentUser()) {
-      // Open the widget (helps the library clear tokens in some flows) then logout
-      try { ni.open(); } catch {}
-      ni.logout();
-      // Fallback redirect in case the logout event handler in index.html misses
-      setTimeout(() => { if (window.location.pathname !== '/login') window.location.href = '/login'; }, 500);
-    } else {
-      window.location.href = '/login';
-    }
-  };
-
+function Header({ onOpenArchives, counts, progress }) {
   return (
     <>
       <header className="app-header" style={{ justifyContent: 'space-between' }}>
         <h1 className="app-title">Anu&apos;s Task Board</h1>
 
         <div className="header-actions">
-          {/* Archives */}
           <button
             className="icon-btn tooltip archive-btn"
             data-tip="Archives"
@@ -114,23 +56,9 @@ function Header({ onReset, onOpenArchives, counts, progress }) {
               <path d="M3 3h18v4H3V3zm2 6h14v12H5V9zm3 2v2h8v-2H8z"/>
             </svg>
           </button>
-
-          {/* Logout (Reset removed per your request) */}
-          <button
-            className="icon-btn tooltip logout-btn"
-            data-tip="Log out"
-            aria-label="Log out"
-            onClick={handleLogout}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="currentColor" role="img" aria-hidden="true">
-              <path d="M10.09 15.59 11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3h-6v2h6v14h-6v2h6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
-            </svg>
-          </button>
         </div>
       </header>
 
-      {/* Progress row */}
       <div className="progress-row">
         <div className="progress-text">Done {counts.done}/{counts.total}</div>
         <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
@@ -138,6 +66,7 @@ function Header({ onReset, onOpenArchives, counts, progress }) {
     </>
   );
 }
+
 
 /* ---------------- Stars ---------------- */
 function Stars({ value, onChange, editable = false }) {
