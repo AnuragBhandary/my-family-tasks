@@ -1,6 +1,1 @@
-/login                   /login.html                       200
-/.netlify/identity/*     /.netlify/identity/:splat         200
-/                        /index.html                       200
-/index.html              /index.html                       200
-/*                       /index.html                       200  Role=parent
-/*                       /login                            302
+/* /index.html 200
